@@ -1,0 +1,442 @@
+From c708590b7ca6c73681bf1daa37b1f9309d0d72f3 Mon Sep 17 00:00:00 2001
+From: Rotten <definitelynotevil@aster.cx>
+Date: Fri, 9 Oct 2026 17:16:58 -0500
+Subject: [PATCH] mediatek: filogic: add support for Zyxel EX5512-T0
+
+Add support for the Zyxel EX5512-T0 Wi-Fi 6 router.
+
+Hardware specs:
+- SoC: MediaTek MT7986A (Filogic 830) 4x Cortex-A53 @ 2.0 GHz
+- RAM: 512 MB DDR4
+- Flash: 512 MB SPI-NAND
+- Ethernet:
+  - 1x 2.5GbE WAN (Realtek RTL8221B @ MDIO 2)
+  - 1x 2.5GbE LAN (Realtek RTL8221B @ MDIO 5 via MT7531 port 5)
+  - 3x 1GbE LAN (MediaTek MT7531 switch)
+- Wi-Fi: MediaTek MT7986A (2.4GHz 4x4 HE20/40, 5GHz 4x4 HE80/160)
+- USB: 1x USB 3.0
+
+Key differences from EX5601-T0:
+- RAM is 512 MB (EX5601-T0 has 1 GB)
+- WAN PHY is Realtek RTL8221B at MDIO address 2 (instead of MDIO 6)
+- Front Internet LED is on GPIO 30 (Green) / GPIO 31 (Red)
+- Front WPS LED is on GPIO 14 (Active Low)
+- VoIP SPI bus is disabled (VoIP hardware unpopulated)
+
+Both stock dual-boot layout and OpenWrt U-Boot layout are supported.
+
+Signed-off-by: Rotten <definitelynotevil@aster.cx>
+---
+ .../dts/mt7986a-zyxel-ex5512-t0-stock.dts     | 147 ++++++++++++++++++
+ .../dts/mt7986a-zyxel-ex5512-t0-ubootmod.dts  | 144 +++++++++++++++++
+ .../filogic/base-files/etc/board.d/01_leds    |   2 +
+ .../filogic/base-files/etc/board.d/02_network |   2 +
+ .../base-files/lib/upgrade/platform.sh        |   1 +
+ target/linux/mediatek/image/filogic.mk        |  48 ++++++
+ 6 files changed, 344 insertions(+)
+ create mode 100644 target/linux/mediatek/dts/mt7986a-zyxel-ex5512-t0-stock.dts
+ create mode 100644 target/linux/mediatek/dts/mt7986a-zyxel-ex5512-t0-ubootmod.dts
+
+diff --git a/target/linux/mediatek/dts/mt7986a-zyxel-ex5512-t0-stock.dts b/target/linux/mediatek/dts/mt7986a-zyxel-ex5512-t0-stock.dts
+new file mode 100644
+index 0000000..ccd0aed
+--- /dev/null
++++ b/target/linux/mediatek/dts/mt7986a-zyxel-ex5512-t0-stock.dts
+@@ -0,0 +1,147 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++/*
++ * Copyright (C) 2021 MediaTek Inc.
++ * Author: Sam.Shih <sam.shih@mediatek.com>
++ */
++
++/dts-v1/;
++#include "mt7986a.dtsi"
++#include "mt7986a-zyxel-ex5601-t0-common.dtsi"
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++
++/ {
++	model = "Zyxel EX5512-T0 (stock layout)";
++	compatible = "zyxel,ex5512-t0-stock", "mediatek,mt7986a";
++
++	leds {
++		led_green_inet: led_green_inet {
++			label = "green:inet";
++			gpios = <&pio 30 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		led_red_inet: led_red_inet {
++			label = "red:inet";
++			gpios = <&pio 31 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		led_green_wps: led_green_wps {
++			label = "green:wps";
++			gpios = <&pio 14 GPIO_ACTIVE_LOW>;
++			default-state = "off";
++		};
++	};
++};
++
++&spi_nand {
++	mediatek,nmbm;
++	mediatek,bmt-max-ratio = <1>;
++	mediatek,bmt-max-reserved-blocks = <64>;
++};
++
++&nand_partitions {
++	partition@0 {
++		label = "BL2";
++		reg = <0x00000 0x0100000>;
++		read-only;
++	};
++
++	partition@100000 {
++		label = "u-boot-env";
++		reg = <0x0100000 0x0080000>;
++	};
++
++	factory: partition@180000 {
++		label = "Factory";
++		reg = <0x180000 0x0200000>;
++		read-only;
++
++		nvmem-layout {
++			compatible = "fixed-layout";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			eeprom_factory: eeprom@0 {
++				#size-cells = <1>;
++				reg = <0x0 0x1000>;
++			};
++
++			macaddr_factory_0004: macaddr@0004 {
++				compatible = "mac-base";
++				reg = <0x0004 0x6>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			macaddr_factory_0024: macaddr@0024 {
++				compatible = "mac-base";
++				reg = <0x0024 0x6>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			macaddr_factory_002a: macaddr@002a {
++				compatible = "mac-base";
++				reg = <0x002a 0x6>;
++				#nvmem-cell-cells = <1>;
++			};
++		};
++	};
++
++	partition@380000 {
++		label = "FIP";
++		reg = <0x380000 0x01C0000>;
++		read-only;
++	};
++
++	partition@540000 {
++		label = "zloader";
++		reg = <0x540000 0x0040000>;
++		read-only;
++	};
++
++	partition@580000 {
++		label = "ubi";
++		reg = <0x580000 0x4000000>;
++	};
++
++	partition@4580000 {
++		label = "ubi2";
++		reg = <0x4580000 0x4000000>;
++		read-only;
++	};
++
++	partition@8580000 {
++		label = "zyubi";
++		reg = <0x8580000 0x15A80000>;
++	};
++};
++
++&gmac0 {
++	nvmem-cells = <&macaddr_factory_002a 0>;
++	nvmem-cell-names = "mac-address";
++};
++
++&gmac1 {
++	phy = <&phy2>;
++	nvmem-cells = <&macaddr_factory_0024 0>;
++	nvmem-cell-names = "mac-address";
++};
++
++&mdio {
++	/delete-node/ phy@6;
++
++	phy2: phy@2 {
++		compatible = "ethernet-phy-ieee802.3-c45";
++		reg = <2>;
++	};
++};
++
++&spi1 {
++	status = "disabled";
++};
++
++&wifi {
++	nvmem-cells = <&eeprom_factory>;
++	nvmem-cell-names = "eeprom";
++};
+diff --git a/target/linux/mediatek/dts/mt7986a-zyxel-ex5512-t0-ubootmod.dts b/target/linux/mediatek/dts/mt7986a-zyxel-ex5512-t0-ubootmod.dts
+new file mode 100644
+index 0000000..e60caf1
+--- /dev/null
++++ b/target/linux/mediatek/dts/mt7986a-zyxel-ex5512-t0-ubootmod.dts
+@@ -0,0 +1,144 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++/*
++ * Copyright (C) 2021 MediaTek Inc.
++ * Author: Sam.Shih <sam.shih@mediatek.com>
++ */
++
++/dts-v1/;
++#include "mt7986a.dtsi"
++#include "mt7986a-zyxel-ex5601-t0-common.dtsi"
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++
++/ {
++	model = "Zyxel EX5512-T0 (ubootmod)";
++	compatible = "zyxel,ex5512-t0-ubootmod", "mediatek,mt7986a";
++	chosen {
++		bootargs-append = " root=/dev/fit0 rootwait";
++		rootdisk = <&ubi_rootdisk>;
++	};
++};
++
++&nand_partitions {
++	partition@0 {
++		label = "bl2";
++		reg = <0x0 0x100000>;
++		read-only;
++	};
++
++	partition@100000 {
++		label = "u-boot-env";
++		reg = <0x0100000 0x0080000>;
++		read-only;
++	};
++
++	factory: partition@180000 {
++		label = "Factory";
++		reg = <0x180000 0x0200000>;
++		read-only;
++
++		nvmem-layout {
++			compatible = "fixed-layout";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			eeprom_factory: eeprom@0 {
++				#size-cells = <1>;
++				reg = <0x0 0x1000>;
++			};
++
++			macaddr_factory_0004: macaddr@0004 {
++				compatible = "mac-base";
++				reg = <0x0004 0x6>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			macaddr_factory_0024: macaddr@0024 {
++				compatible = "mac-base";
++				reg = <0x0024 0x6>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			macaddr_factory_002a: macaddr@002a {
++				compatible = "mac-base";
++				reg = <0x002a 0x6>;
++				#nvmem-cell-cells = <1>;
++			};
++		};
++	};
++
++	partition@380000 {
++		label = "fip";
++		reg = <0x380000 0x0200000>;
++		read-only;
++	};
++
++	partition@540000 {
++		label = "zloader";
++		reg = <0x540000 0x0040000>;
++		read-only;
++	};
++
++	partition@580000 {
++		label = "ubi";
++		reg = <0x580000 0x1da80000>;
++		compatible = "linux,ubi";
++
++		volumes {
++			ubi_rootdisk: ubi-volume-fit {
++				volname = "fit";
++			};
++		};
++	};
++};
++
++&gmac0 {
++	nvmem-cells = <&macaddr_factory_002a 0>;
++	nvmem-cell-names = "mac-address";
++};
++
++&gmac1 {
++	phy = <&phy2>;
++	nvmem-cells = <&macaddr_factory_0024 0>;
++	nvmem-cell-names = "mac-address";
++};
++
++&mdio {
++	/delete-node/ phy@6;
++
++	phy2: phy@2 {
++		compatible = "ethernet-phy-ieee802.3-c45";
++		reg = <2>;
++	};
++};
++
++/ {
++	leds {
++		led_green_inet: led_green_inet {
++			label = "green:inet";
++			gpios = <&pio 30 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		led_red_inet: led_red_inet {
++			label = "red:inet";
++			gpios = <&pio 31 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		led_green_wps: led_green_wps {
++			label = "green:wps";
++			gpios = <&pio 14 GPIO_ACTIVE_LOW>;
++			default-state = "off";
++		};
++	};
++};
++
++&spi1 {
++	status = "disabled";
++};
++
++&wifi {
++	nvmem-cells = <&eeprom_factory>;
++	nvmem-cell-names = "eeprom";
++};
+diff --git a/target/linux/mediatek/filogic/base-files/etc/board.d/01_leds b/target/linux/mediatek/filogic/base-files/etc/board.d/01_leds
+index 7f8fb4b..f3189e8 100644
+--- a/target/linux/mediatek/filogic/base-files/etc/board.d/01_leds
++++ b/target/linux/mediatek/filogic/base-files/etc/board.d/01_leds
+@@ -181,6 +181,8 @@ xiaomi,redmi-router-ax6000-ubootmod)
+ zbtlink,zbt-z8103ax)
+ 	ucidef_set_led_netdev "wan" "wan" "green:wan" "eth1" "link tx rx"
+ 	;;
++zyxel,ex5512-t0-stock|\
++zyxel,ex5512-t0-ubootmod|\
+ zyxel,ex5601-t0-stock|\
+ zyxel,ex5601-t0-ubootmod)
+ 	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth0" "link tx rx"
+diff --git a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
+index f2c38d5..3c63d25 100644
+--- a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
++++ b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
+@@ -57,6 +57,8 @@ mediatek_setup_interfaces()
+ 	wavlink,wl-wn536ax6-a|\
+ 	zbtlink,zbt-z8102ax|\
+ 	zbtlink,zbt-z8102ax-v2|\
++	zyxel,ex5512-t0-stock|\
++	zyxel,ex5512-t0-ubootmod|\
+ 	zyxel,ex5601-t0-stock|\
+ 	zyxel,ex5601-t0-ubootmod)
+ 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" eth1
+diff --git a/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh b/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
+index 8af61b0..5a0e6b2 100644
+--- a/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
++++ b/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
+@@ -95,6 +95,7 @@ platform_do_upgrade() {
+ 	xiaomi,mi-router-ax3000t-ubootmod|\
+ 	xiaomi,redmi-router-ax6000-ubootmod|\
+ 	xiaomi,mi-router-wr30u-ubootmod|\
++	zyxel,ex5512-t0-ubootmod|\
+ 	zyxel,ex5601-t0-ubootmod)
+ 		fit_do_upgrade "$1"
+ 		;;
+diff --git a/target/linux/mediatek/image/filogic.mk b/target/linux/mediatek/image/filogic.mk
+index b7f8ffd..dde1744 100644
+--- a/target/linux/mediatek/image/filogic.mk
++++ b/target/linux/mediatek/image/filogic.mk
+@@ -2213,6 +2213,54 @@ endif
+ endef
+ TARGET_DEVICES += zyxel_ex5601-t0-ubootmod
+ 
++define Device/zyxel_ex5512-t0-stock
++  DEVICE_VENDOR := Zyxel
++  DEVICE_MODEL := EX5512-T0
++  DEVICE_VARIANT := (stock layout)
++  DEVICE_DTS := mt7986a-zyxel-ex5512-t0-stock
++  DEVICE_DTS_DIR := ../dts
++  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware kmod-usb3 mdio-tools
++  SUPPORTED_DEVICES := mediatek,mt7986a-rfb-snand
++  UBINIZE_OPTS := -E 5
++  BLOCKSIZE := 256k
++  PAGESIZE := 4096
++  IMAGE_SIZE := 65536k
++  KERNEL_IN_UBI := 1
++  IMAGES += factory.bin
++  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
++  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
++  KERNEL = kernel-bin | lzma | \
++	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
++  KERNEL_INITRAMFS = kernel-bin | lzma | \
++	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
++endef
++TARGET_DEVICES += zyxel_ex5512-t0-stock
++
++define Device/zyxel_ex5512-t0-ubootmod
++  DEVICE_VENDOR := Zyxel
++  DEVICE_MODEL := EX5512-T0
++  DEVICE_VARIANT := (OpenWrt U-Boot layout)
++  DEVICE_DTS := mt7986a-zyxel-ex5512-t0-ubootmod
++  DEVICE_DTS_DIR := ../dts
++  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware kmod-usb3 mdio-tools
++  KERNEL_INITRAMFS_SUFFIX := -recovery.itb
++  IMAGES := sysupgrade.itb
++  UBINIZE_OPTS := -E 5
++  BLOCKSIZE := 256k
++  PAGESIZE := 4096
++  KERNEL_IN_UBI := 1
++  UBOOTENV_IN_UBI := 1
++  KERNEL := kernel-bin | lzma
++  KERNEL_INITRAMFS := kernel-bin | lzma | \
++	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
++  IMAGE/sysupgrade.itb := append-kernel | \
++	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-static-with-rootfs | append-metadata
++  ARTIFACTS := preloader.bin bl31-uboot.fip
++  ARTIFACT/preloader.bin := mt7986-bl2 spim-nand-4k-ddr4
++  ARTIFACT/bl31-uboot.fip := mt7986-bl31-uboot zyxel_ex5601-t0
++endef
++TARGET_DEVICES += zyxel_ex5512-t0-ubootmod
++
+ define Device/zyxel_ex5700-telenor
+   DEVICE_VENDOR := Zyxel
+   DEVICE_MODEL := EX5700 (Telenor)
+-- 
+2.54.0
+

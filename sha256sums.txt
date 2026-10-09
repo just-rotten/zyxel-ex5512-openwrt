@@ -1,0 +1,12 @@
+42064142c8de50b58dfe3a6df8692e03de136e92b075cc709e72ae09ea228f30  ./firmware/stock_dualboot/openwrt-24.10.8-mediatek-filogic-zyxel_ex5512-t0-stock-kernel.itb
+92d51ef0e09600201059978085ec73b17c495aa3e7932c1169f12bfeedf5aebf  ./firmware/stock_dualboot/openwrt-24.10.8-mediatek-filogic-zyxel_ex5512-t0-stock-root.squashfs
+0822120f9b9ed302be6815732ba8b1db008e8be50f33a82665dcd733976e3407  ./firmware/ubootmod/mtd-rw.ko
+1526e7cb6e54b3c0dec17339f0af215988ddc85b58e6a4f961bc842e0073d8e7  ./firmware/ubootmod/openwrt-24.10.8-mediatek-filogic-zyxel_ex5512-t0-ubootmod-bl31-uboot.fip
+cd3f944d7ae782918c88d9f4d52ac712d99b1f2e79a9953983127a0f34f31f5f  ./firmware/ubootmod/openwrt-24.10.8-mediatek-filogic-zyxel_ex5512-t0-ubootmod-initramfs-recovery.itb
+00cb5cda54e5ba6b7468f80234b7efb529da736d3957fbb3621d50992e137f43  ./firmware/ubootmod/openwrt-24.10.8-mediatek-filogic-zyxel_ex5512-t0-ubootmod-preloader.bin
+3ccff510e0ac0fe4309ae76dec88ebb2ddbb4278b767ccc6684817f193868e37  ./firmware/ubootmod/openwrt-24.10.8-mediatek-filogic-zyxel_ex5512-t0-ubootmod-squashfs-sysupgrade.itb
+026353f3c965fae165c9667e2b5a89718f57757d03b290c9e0ae0051b6ccaeaa  ./patches/0001-target-mediatek-filogic-add-Zyxel-EX5512-T0-support.patch
+38d3b16a226cd988d06fb8ca99979c103e420b201bcd72b535cbc24a2eb45488  ./patches/mt7986a-zyxel-ex5512-t0-stock.dts
+1ea5a2893103fd12888ff623b8b7b59baa4339fc2c959ed29b746173a1a163ec  ./patches/mt7986a-zyxel-ex5512-t0-ubootmod.dts
+cf0b931ecf56220aba2d4e2e3e3af42a55d80da8177e65ce8012475ed34d73f0  ./README.md
+974fbac6e84cbe1cd0386f753a0e49fd6af36449588fa41b9baf3c350cd0d7e8  ./scripts/port_leds
